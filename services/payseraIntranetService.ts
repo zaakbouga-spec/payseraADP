@@ -512,45 +512,81 @@ class PayseraIntranetService {
     let system = '';
     let fee = '';
 
-    // Currency One supported currencies
-    const currencyOneCurrencies = ['USD', 'GBP', 'CHF', 'PLN', 'CZK', 'RON', 'BGN', 'NOK', 'SEK', 'DKK', 'HUF'];
+    // Define system-specific currencies and rules
+    const currencyOneCurrencies = ['USD', 'GBP', 'CHF', 'PLN', 'CZK', 'RON', 'NOK', 'SEK', 'DKK', 'HUF'];
+    
+    // Special country-currency specific systems (like bg-postbank for BGN to Bulgaria)
+    const specialSystems: Record<string, { countries: string[], system: string, fee: string, processingTime: string, description: string }> = {
+      'BGN': {
+        countries: ['Bulgaria'],
+        system: 'BG-Postbank (Bulgarian Direct Transfer)',
+        fee: '1 EUR',
+        processingTime: '1-2 business days',
+        description: 'BGN transfers to Bulgaria are processed through BG-Postbank system, providing direct local transfers in Bulgarian Lev'
+      },
+      // Add more special systems here as needed (e.g., specific systems for other currencies/countries)
+    };
 
     // 1. Local transfer for Lithuania (EUR only)
     if (params.recipientCountry === 'Lithuania' && params.currency === 'EUR') {
       system = 'Local Transfer (Lithuania)';
       fee = '0 EUR';
-      restrictions.push('✅ Transfer will be executed via LOCAL transfer system');
+      restrictions.push('✅ Transfer will be executed via LOCAL TRANSFER system (Lithuania domestic)');
+      restrictions.push('📍 Why this system: Sending EUR within Lithuania uses the local Lithuanian banking network');
       restrictions.push('⏱️ Processing time: Same business day');
       restrictions.push('💶 Fee: 0 EUR (free for local Lithuanian transfers)');
+      restrictions.push('📄 Source: Paysera internal transfer routing rules - Local transfers within Lithuania');
     } 
-    // 2. SEPA for EUR within EU/EEA
+    // 2. Special country-currency systems (like bg-postbank for BGN)
+    else if (specialSystems[params.currency] && specialSystems[params.currency].countries.includes(params.recipientCountry)) {
+      const specialSystem = specialSystems[params.currency];
+      system = specialSystem.system;
+      fee = specialSystem.fee;
+      restrictions.push(`✅ Transfer will be executed via ${specialSystem.system.toUpperCase()}`);
+      restrictions.push(`📍 Why this system: ${specialSystem.description}`);
+      restrictions.push(`💱 Currency: ${params.currency} to ${params.recipientCountry}`);
+      restrictions.push(`⏱️ Processing time: ${specialSystem.processingTime}`);
+      restrictions.push(`💶 Fee: ${specialSystem.fee}`);
+      restrictions.push(`📄 Source: Intranet Page ID ${PAGE_ID} - Currency-specific transfer systems section`);
+      restrictions.push(`🔗 ${rules.pageSource || 'https://intranet.paysera.net/display/PSWEB/58238300'}`);
+    }
+    // 3. SEPA for EUR within EU/EEA
     else if (params.currency === 'EUR' && this.isEUCountry(params.recipientCountry)) {
       system = 'SEPA';
       fee = '0 EUR';
       restrictions.push('✅ Transfer will be executed via SEPA (Single Euro Payments Area)');
+      restrictions.push(`📍 Why this system: Sending EUR to ${params.recipientCountry} (EU/EEA country) qualifies for SEPA`);
       restrictions.push('⏱️ Processing time: 1-2 business days');
       restrictions.push('💶 Fee: 0 EUR (free for SEPA transfers)');
-      restrictions.push('📋 SEPA transfers are available only within EU/EEA countries in EUR');
+      restrictions.push('📋 SEPA requirements: EUR currency + EU/EEA recipient country');
+      restrictions.push(`📄 Source: Intranet Page ID ${PAGE_ID} - SEPA transfer rules section`);
+      restrictions.push(`🔗 ${rules.pageSource || 'https://intranet.paysera.net/display/PSWEB/58238300'}`);
     }
-    // 3. Currency One for supported currencies
+    // 4. Currency One for supported currencies
     else if (currencyOneCurrencies.includes(params.currency)) {
       system = 'Currency One';
       fee = '1 EUR';
       restrictions.push(`✅ Transfer will be executed via CURRENCY ONE system`);
+      restrictions.push(`📍 Why this system: ${params.currency} is supported by Currency One for international transfers`);
       restrictions.push(`💱 Supported currency: ${params.currency}`);
       restrictions.push('⏱️ Processing time: 1-3 business days');
-      restrictions.push('💶 Fee: 1 EUR per transfer');
-      restrictions.push(`📋 Currency One supports: ${currencyOneCurrencies.join(', ')}`);
+      restrictions.push('💶 Fee: 1 EUR per transfer (flat fee regardless of amount)');
+      restrictions.push(`📋 Currency One supported currencies: ${currencyOneCurrencies.join(', ')}`);
+      restrictions.push(`📄 Source: Intranet Page ID ${PAGE_ID} - Currency One system section`);
+      restrictions.push(`🔗 ${rules.pageSource || 'https://intranet.paysera.net/display/PSWEB/58238300'}`);
     }
-    // 4. SWIFT for all other international transfers
+    // 5. SWIFT for all other international transfers
     else {
       system = 'SWIFT';
       fee = '15-50 EUR (depending on currency and amount)';
       restrictions.push('✅ Transfer will be executed via SWIFT (international wire transfer)');
+      restrictions.push(`📍 Why this system: ${params.currency} transfers to ${params.recipientCountry} require SWIFT as they're not covered by SEPA or Currency One`);
       restrictions.push('⏱️ Processing time: 3-5 business days');
       restrictions.push('💶 Fee: 15-50 EUR depending on currency and transfer amount');
       restrictions.push('⚠️ Intermediary bank fees may apply (additional charges from correspondent banks)');
-      restrictions.push('📋 SWIFT is used for currencies not supported by Currency One or SEPA');
+      restrictions.push('📋 SWIFT is used for currencies outside SEPA/Currency One coverage or non-EU countries');
+      restrictions.push(`📄 Source: Intranet Page ID ${PAGE_ID} - SWIFT transfer rules section`);
+      restrictions.push(`🔗 ${rules.pageSource || 'https://intranet.paysera.net/display/PSWEB/58238300'}`);
     }
 
     // Add enhanced monitoring restrictions
