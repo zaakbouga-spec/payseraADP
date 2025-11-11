@@ -2,7 +2,7 @@
 export enum ToolType {
   TRANSFER_CHECK = 'Transfer Check',
   COMPANY_VALIDATION = 'Company Validation',
-  IBAN_SWIFT_VALIDATOR = 'IBAN & SWIFT Validator',
+  INTRANET_SEARCH = 'Intranet Search',
 }
 
 export enum CountryStatus {
@@ -50,14 +50,20 @@ export interface CompanyValidationResponse {
     intranetPageSource?: string;
 }
 
-export interface IdentifierValidationResponse {
-  isValid: boolean;
-  type: 'IBAN' | 'SWIFT' | 'Unknown';
-  details: {
-      bankName?: string;
-      country?: string;
-      branch?: string;
-  };
-  supportedTransfers?: string[];
-  message: string;
+export interface IntranetSearchRequest {
+  query: string;
+}
+
+export interface IntranetSearchResult {
+  pageId: string;
+  pageTitle: string;
+  pageUrl: string;
+  relevantContent: string;
+  summary: string;
+}
+
+export interface IntranetSearchResponse {
+  results: IntranetSearchResult[];
+  totalResults: number;
+  query: string;
 }

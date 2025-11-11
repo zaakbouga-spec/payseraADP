@@ -1,10 +1,9 @@
 
 import React, { useState, useMemo } from 'react';
 import { COUNTRIES, CURRENCIES } from '@/constants';
-import { Country, CountryStatus, TransferCheckResponse, CompanyValidationResponse, IdentifierValidationResponse } from '@/types';
-import { checkTransfer, validateCompany, validateIdentifier } from '@/services/companyApiService';
+import { Country, CountryStatus, TransferCheckResponse, CompanyValidationResponse, IntranetSearchResponse } from '@/types';
+import { checkTransfer, validateCompany, searchIntranet } from '@/services/companyApiService';
 import Spinner from '@/components/Spinner';
-import { isValidIBAN } from '@/utils/iban';
 import { InfoIcon, SystemIcon, FeeIcon, RestrictionIcon, ConclusionIcon, CountryIcon, ActivityIcon } from '@/components/Icons';
 
 // --- Reusable Result Display Components ---
@@ -267,33 +266,25 @@ export const CompanyValidator = () => {
 };
 
 
-// IBAN & SWIFT Validator Tool
-export const IbanSwiftValidator = () => {
-  const [identifier, setIdentifier] = useState('');
+// Intranet Search Tool
+export const IntranetSearch = () => {
+  const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<IdentifierValidationResponse | null>(null);
+  const [result, setResult] = useState<IntranetSearchResponse | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!identifier.trim()) {
-      setError("Please enter an IBAN or SWIFT code.");
+    if (!query.trim()) {
+      setError("Please enter a search query.");
       return;
     }
     setLoading(true);
     setError(null);
     setResult(null);
 
-    // Basic client-side check for IBAN format before sending to the API
-    const isPotentiallyIban = /^[A-Z]{2}/.test(identifier.trim().toUpperCase());
-    if (isPotentiallyIban && !isValidIBAN(identifier)) {
-        setError("The IBAN has an invalid format. Please check the length and characters.");
-        setLoading(false);
-        return;
-    }
-
     try {
-      const response = await validateIdentifier(identifier.trim());
+      const response = await searchIntranet(query.trim());
       setResult(response);
     } catch (err) {
       if (err instanceof Error) {
@@ -309,61 +300,83 @@ export const IbanSwiftValidator = () => {
   const ResultDisplay = () => {
     if (!result) return null;
     
-    const statusColor = result.isValid ? 'bg-green-100 text-green-800 border-green-200' : 'bg-red-100 text-red-800 border-red-200';
-    const statusIcon = result.isValid ? '✅' : '❌';
-
     return (
-      <ResultCard title="Identifier Analysis">
-          <div className={`p-3 rounded-lg font-bold text-lg text-center border ${statusColor}`}>
-            {statusIcon} {result.isValid ? `Valid ${result.type}` : 'Invalid Identifier'}
+      <ResultCard title={`Search Results for "${result.query}"`}>
+        <div className="text-sm text-gray-600 mb-4">
+          Found {result.totalResults} result{result.totalResults !== 1 ? 's' : ''}
+        </div>
+        
+        {result.results.length === 0 ? (
+          <div className="text-center py-8 text-gray-500">
+            <p>No results found. Try a different search term.</p>
           </div>
-          {!result.isValid ? (
-              <ResultField icon={<InfoIcon />} label="Reason" value={result.message} />
-          ) : (
-              <>
-                  <ResultField icon={<InfoIcon />} label="Bank Name" value={result.details.bankName} />
-                  <ResultField icon={<CountryIcon />} label="Country" value={result.details.country} />
-                  <ResultField icon={<SystemIcon />} label="Branch" value={result.details.branch} />
-                  {result.supportedTransfers && result.supportedTransfers.length > 0 && (
-                      <div className="flex items-start space-x-3">
-                          <InfoIcon />
-                          <div>
-                              <p className="text-sm font-semibold text-gray-600">Supported Transfers</p>
-                              <ul className="list-disc list-inside text-base text-gray-800">
-                                  {result.supportedTransfers.map(t => <li key={t}>{t}</li>)}
-                              </ul>
-                          </div>
-                      </div>
-                  )}
-                  <div className="pt-2 border-t">
-                      <ResultField icon={<ConclusionIcon />} label="Message" value={result.message} />
-                  </div>
-              </>
-          )}
+        ) : (
+          <div className="space-y-6">
+            {result.results.map((item, index) => (
+              <div key={index} className="border-l-4 border-blue-500 pl-4 py-2 bg-gray-50 rounded-r-lg">
+                <h4 className="font-bold text-lg text-gray-800 mb-2">{item.pageTitle}</h4>
+                
+                <div className="flex items-center space-x-2 text-sm text-gray-600 mb-2">
+                  <InfoIcon />
+                  <span className="font-semibold">Page ID:</span>
+                  <span className="font-mono bg-gray-200 px-2 py-0.5 rounded">{item.pageId}</span>
+                </div>
+                
+                <p className="text-sm text-gray-700 mb-3 italic">
+                  {item.summary}
+                </p>
+                
+                <div className="bg-white p-3 rounded border border-gray-200 mb-3">
+                  <p className="text-sm text-gray-600 leading-relaxed">
+                    {item.relevantContent}
+                  </p>
+                </div>
+                
+                <a 
+                  href={item.pageUrl} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center text-blue-600 hover:text-blue-800 font-semibold text-sm"
+                >
+                  🔗 View Full Page
+                  <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                  </svg>
+                </a>
+              </div>
+            ))}
+          </div>
+        )}
       </ResultCard>
     );
   };
 
   return (
     <div className="space-y-4">
-      <p className="text-gray-600">Enter an IBAN or SWIFT/BIC code to validate its format and get information about supported transfer types from your company's system.</p>
+      <p className="text-gray-600">
+        Search the Paysera intranet for information on transfer rules, country restrictions, business activities, and compliance policies. 
+        Results will show the page ID and link where you can find detailed information.
+      </p>
       <form onSubmit={handleSubmit} className="space-y-4" aria-busy={loading}>
         <div>
-          <label htmlFor="identifier" className="block text-sm font-medium text-gray-700">IBAN / SWIFT Code</label>
+          <label htmlFor="searchQuery" className="block text-sm font-medium text-gray-700">Search Query</label>
           <input
-            id="identifier"
+            id="searchQuery"
             type="text"
-            value={identifier}
-            onChange={e => setIdentifier(e.target.value)}
-            placeholder="e.g., GB29 NWBK 6016... or DEUTDEFF"
-            className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-purple-500 focus:border-purple-500 uppercase tracking-wider"
+            value={query}
+            onChange={e => setQuery(e.target.value)}
+            placeholder="e.g., SEPA, Currency One, restricted countries, gambling..."
+            className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-purple-500 focus:border-purple-500"
             required
           />
+          <p className="mt-1 text-xs text-gray-500">
+            Try searching for: transfers, SEPA, SWIFT, countries, activities, crypto, gambling, KYC, AML, etc.
+          </p>
         </div>
         <div className="flex items-center justify-end pt-2">
           {loading ? <Spinner /> :
             <button type="submit" className="px-6 py-2 bg-purple-600 text-white font-semibold rounded-lg shadow-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-opacity-75">
-              Validate & Analyze
+              Search Intranet
             </button>
           }
         </div>

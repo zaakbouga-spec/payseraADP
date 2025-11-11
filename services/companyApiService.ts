@@ -3,8 +3,7 @@ import {
     TransferCheckRequest, 
     CompanyValidationRequest, 
     TransferCheckResponse, 
-    CompanyValidationResponse,
-    IdentifierValidationResponse
+    CompanyValidationResponse
 } from '../types';
 import { payseraIntranetService } from './payseraIntranetService';
 
@@ -183,67 +182,17 @@ export const validateCompany = async (data: CompanyValidationRequest): Promise<C
     }
 };
 
-export const validateIdentifier = async (identifier: string): Promise<IdentifierValidationResponse> => {
-    const cleanIdentifier = identifier.replace(/\s/g, '').toUpperCase();
-    
-    // Check if it's an IBAN (starts with 2 letters)
-    if (/^[A-Z]{2}/.test(cleanIdentifier)) {
-        const countryCode = cleanIdentifier.substring(0, 2);
-        const countryInfo = IBAN_COUNTRY_CODES[countryCode];
-        
-        if (!countryInfo) {
-            return {
-                isValid: false,
-                type: 'Unknown',
-                details: {},
-                message: `Unknown country code: ${countryCode}`,
-            };
-        }
-        
-        if (cleanIdentifier.length !== countryInfo.length) {
-            return {
-                isValid: false,
-                type: 'IBAN',
-                details: {},
-                message: `Invalid IBAN length for ${countryInfo.name}. Expected ${countryInfo.length} characters, got ${cleanIdentifier.length}.`,
-            };
-        }
+export const searchIntranet = async (query: string): Promise<import('../types').IntranetSearchResponse> => {
+    try {
+        const result = await payseraIntranetService.searchIntranet(query);
         
         return {
-            isValid: true,
-            type: 'IBAN',
-            details: {
-                country: countryInfo.name,
-                bankName: 'Bank information available upon account verification',
-                branch: 'N/A',
-            },
-            supportedTransfers: ['SEPA', 'SWIFT'],
-            message: `Valid IBAN for ${countryInfo.name}. This account can receive SEPA and international transfers.`,
+            results: result.results,
+            totalResults: result.totalResults,
+            query: result.query,
         };
+    } catch (error) {
+        console.error('Intranet search error:', error);
+        throw new Error('Failed to search intranet. Please verify your query and try again.');
     }
-    
-    // Check if it's a SWIFT/BIC code (8 or 11 characters)
-    if (/^[A-Z]{6}[A-Z0-9]{2}([A-Z0-9]{3})?$/.test(cleanIdentifier)) {
-        const countryCode = cleanIdentifier.substring(4, 6);
-        const countryInfo = IBAN_COUNTRY_CODES[countryCode];
-        
-        return {
-            isValid: true,
-            type: 'SWIFT',
-            details: {
-                country: countryInfo?.name || 'Unknown',
-                bankName: 'Bank information available upon verification',
-                branch: cleanIdentifier.length === 11 ? cleanIdentifier.substring(8) : 'Head Office',
-            },
-            supportedTransfers: ['SWIFT', 'International Wire'],
-            message: `Valid SWIFT/BIC code. This identifier can be used for international wire transfers.`,
-        };
-    }
-    
-    return {
-        isValid: false,
-        type: 'Unknown',
-        details: {},
-        message: 'Invalid format. Please enter a valid IBAN or SWIFT/BIC code.',
-    };
 };

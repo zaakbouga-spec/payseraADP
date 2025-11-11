@@ -3,7 +3,7 @@ import Header from '@/components/Header.tsx';
 import ToolCard from '@/components/ToolCard.tsx';
 import Modal from '@/components/Modal.tsx';
 import { TransferIcon, CompanyValidationIcon, IbanIcon } from '@/components/Icons.tsx';
-import { TransferChecker, CompanyValidator, IbanSwiftValidator } from '@/components/Tools.tsx';
+import { TransferChecker, CompanyValidator, IntranetSearch } from '@/components/Tools.tsx';
 import { ToolType } from '@/types.ts';
 
 const App = () => {
@@ -23,8 +23,8 @@ const App = () => {
         return <TransferChecker />;
       case ToolType.COMPANY_VALIDATION:
         return <CompanyValidator />;
-      case ToolType.IBAN_SWIFT_VALIDATOR:
-        return <IbanSwiftValidator />;
+      case ToolType.INTRANET_SEARCH:
+        return <IntranetSearch />;
       default:
         return null;
     }
@@ -65,11 +65,11 @@ const App = () => {
               onClick={() => openTool(ToolType.COMPANY_VALIDATION)}
             />
              <ToolCard
-              title="IBAN & SWIFT Validator"
-              description="Analyze IBAN/SWIFT details"
+              title="Intranet Search"
+              description="Search policies and rules"
               icon={<IbanIcon />}
               colorClass="bg-[#6B4DA8] hover:bg-[#5a3f90]"
-              onClick={() => openTool(ToolType.IBAN_SWIFT_VALIDATOR)}
+              onClick={() => openTool(ToolType.INTRANET_SEARCH)}
             />
             </div>
              <p className="text-gray-500 mt-10 text-lg">

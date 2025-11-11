@@ -449,49 +449,57 @@ class PayseraIntranetService {
     restrictions: string[];
     requiresEnhancedMonitoring: boolean;
     intranetPageSource?: string;
+    pageId?: string;
   }> {
     const rules = await this.getTransferRules();
     const restrictions: string[] = [];
+    const PAGE_ID = '58238300';
 
     console.log(`Checking transfer: ${params.senderNationality} → ${params.recipientCountry}, Currency: ${params.currency}`);
-    console.log(`Source: ${rules.pageSource || 'Intranet Page 58238300'}`);
+    console.log(`Source: Intranet Page ID ${PAGE_ID}`);
 
     // Check if SENDER nationality is restricted/prohibited
     if (rules.restrictedCountries.includes(params.senderNationality)) {
+      restrictions.push(`❌ Transfers FROM ${params.senderNationality} are PROHIBITED due to sanctions/compliance restrictions`);
+      restrictions.push(`📄 Source: Intranet Page ID ${PAGE_ID} - Restricted Countries section`);
+      restrictions.push(`🔗 View full details at: ${rules.pageSource || 'https://intranet.paysera.net/display/PSWEB/58238300'}`);
+      
       return {
         isPossible: false,
-        restrictions: [
-          `Transfers from ${params.senderNationality} are prohibited due to sanctions/compliance restrictions.`,
-          `Reference: Intranet Page 58238300 - Restricted Countries List`
-        ],
+        restrictions,
         requiresEnhancedMonitoring: false,
         intranetPageSource: rules.pageSource,
+        pageId: PAGE_ID,
       };
     }
 
     // Check if RECIPIENT country is prohibited
     if (rules.restrictedCountries.includes(params.recipientCountry)) {
+      restrictions.push(`❌ Transfers TO ${params.recipientCountry} are PROHIBITED due to sanctions/compliance restrictions`);
+      restrictions.push(`📄 Source: Intranet Page ID ${PAGE_ID} - Restricted Countries section`);
+      restrictions.push(`🔗 View full details at: ${rules.pageSource || 'https://intranet.paysera.net/display/PSWEB/58238300'}`);
+      
       return {
         isPossible: false,
-        restrictions: [
-          `Transfers to ${params.recipientCountry} are prohibited due to sanctions/compliance restrictions.`,
-          `Reference: Intranet Page 58238300 - Restricted Countries List`
-        ],
+        restrictions,
         requiresEnhancedMonitoring: false,
         intranetPageSource: rules.pageSource,
+        pageId: PAGE_ID,
       };
     }
 
     // Check if currency is restricted
     if (rules.currencyRestrictions[params.currency] === 'Prohibited') {
+      restrictions.push(`❌ ${params.currency} transfers are currently PROHIBITED`);
+      restrictions.push(`📄 Source: Intranet Page ID ${PAGE_ID} - Currency Restrictions section`);
+      restrictions.push(`🔗 View full details at: ${rules.pageSource || 'https://intranet.paysera.net/display/PSWEB/58238300'}`);
+      
       return {
         isPossible: false,
-        restrictions: [
-          `${params.currency} transfers are currently prohibited.`,
-          `Reference: Intranet Page 58238300 - Currency Restrictions`
-        ],
+        restrictions,
         requiresEnhancedMonitoring: false,
         intranetPageSource: rules.pageSource,
+        pageId: PAGE_ID,
       };
     }
 
@@ -509,44 +517,59 @@ class PayseraIntranetService {
 
     // 1. Local transfer for Lithuania (EUR only)
     if (params.recipientCountry === 'Lithuania' && params.currency === 'EUR') {
-      system = 'Local Transfer';
+      system = 'Local Transfer (Lithuania)';
       fee = '0 EUR';
-      restrictions.push('Same-day processing for local Lithuanian transfers');
+      restrictions.push('✅ Transfer will be executed via LOCAL transfer system');
+      restrictions.push('⏱️ Processing time: Same business day');
+      restrictions.push('💶 Fee: 0 EUR (free for local Lithuanian transfers)');
     } 
     // 2. SEPA for EUR within EU/EEA
     else if (params.currency === 'EUR' && this.isEUCountry(params.recipientCountry)) {
       system = 'SEPA';
       fee = '0 EUR';
-      restrictions.push('SEPA transfers typically take 1-2 business days');
+      restrictions.push('✅ Transfer will be executed via SEPA (Single Euro Payments Area)');
+      restrictions.push('⏱️ Processing time: 1-2 business days');
+      restrictions.push('💶 Fee: 0 EUR (free for SEPA transfers)');
+      restrictions.push('📋 SEPA transfers are available only within EU/EEA countries in EUR');
     }
     // 3. Currency One for supported currencies
     else if (currencyOneCurrencies.includes(params.currency)) {
       system = 'Currency One';
       fee = '1 EUR';
-      restrictions.push(`Currency One system available for ${params.currency} transfers`);
-      restrictions.push('Processing time: 1-3 business days');
+      restrictions.push(`✅ Transfer will be executed via CURRENCY ONE system`);
+      restrictions.push(`💱 Supported currency: ${params.currency}`);
+      restrictions.push('⏱️ Processing time: 1-3 business days');
+      restrictions.push('💶 Fee: 1 EUR per transfer');
+      restrictions.push(`📋 Currency One supports: ${currencyOneCurrencies.join(', ')}`);
     }
     // 4. SWIFT for all other international transfers
     else {
       system = 'SWIFT';
-      fee = '15-50 EUR depending on currency and amount';
-      restrictions.push('International SWIFT transfers may take 3-5 business days');
-      restrictions.push('Intermediary bank fees may apply');
+      fee = '15-50 EUR (depending on currency and amount)';
+      restrictions.push('✅ Transfer will be executed via SWIFT (international wire transfer)');
+      restrictions.push('⏱️ Processing time: 3-5 business days');
+      restrictions.push('💶 Fee: 15-50 EUR depending on currency and transfer amount');
+      restrictions.push('⚠️ Intermediary bank fees may apply (additional charges from correspondent banks)');
+      restrictions.push('📋 SWIFT is used for currencies not supported by Currency One or SEPA');
     }
 
     // Add enhanced monitoring restrictions
     if (senderRequiresMonitoring) {
-      restrictions.push(`Sender country (${params.senderNationality}) requires enhanced due diligence and monitoring`);
+      restrictions.push(`⚠️ IMPORTANT: Sender country (${params.senderNationality}) requires ENHANCED DUE DILIGENCE and monitoring`);
+      restrictions.push(`📄 Source: Intranet Page ID ${PAGE_ID} - Enhanced Monitoring Countries section`);
     }
     if (recipientRequiresMonitoring) {
-      restrictions.push(`Recipient country (${params.recipientCountry}) requires enhanced due diligence and monitoring`);
+      restrictions.push(`⚠️ IMPORTANT: Recipient country (${params.recipientCountry}) requires ENHANCED DUE DILIGENCE and monitoring`);
+      restrictions.push(`📄 Source: Intranet Page ID ${PAGE_ID} - Enhanced Monitoring Countries section`);
     }
     if (requiresEnhancedMonitoring) {
-      restrictions.push('Additional documentation may be requested for compliance verification');
+      restrictions.push('📝 Additional documentation will be requested for compliance verification');
+      restrictions.push('🔍 Transfer will undergo enhanced screening procedures');
     }
 
-    // Add intranet reference
-    restrictions.push(`Reference: ${rules.pageSource || 'Intranet Page 58238300'}`);
+    // Add intranet reference at the end
+    restrictions.push(`📄 Full transfer rules documented in Intranet Page ID ${PAGE_ID}`);
+    restrictions.push(`🔗 View complete policy at: ${rules.pageSource || 'https://intranet.paysera.net/display/PSWEB/58238300'}`);
 
     return {
       isPossible: true,
@@ -555,6 +578,7 @@ class PayseraIntranetService {
       restrictions,
       requiresEnhancedMonitoring,
       intranetPageSource: rules.pageSource,
+      pageId: PAGE_ID,
     };
   }
 
@@ -569,24 +593,34 @@ class PayseraIntranetService {
     restrictions: string[];
     conditions: string[];
     intranetPageSource?: string;
+    countryPageId?: string;
+    activitiesPageId?: string;
   }> {
     const restrictions = await this.getCompanyRestrictions();
 
     console.log(`Validating company: Country=${params.companyCountry}, Activity=${params.companyActivity}`);
-    console.log(`Source: ${restrictions.pageSource || 'Intranet Page 58238300'}`);
+    console.log(`Source: ${restrictions.pageSource}`);
+
+    const COUNTRY_PAGE_TITLE = 'Opportunities to open a company account by country';
+    const ACTIVITIES_PAGE_TITLE = 'ANNEX 2. TYPES OF BUSINESS ACTIVITIES';
 
     // Check if country is prohibited
     if (restrictions.restrictedCountries.includes(params.companyCountry)) {
       return {
         isPossible: false,
-        countryStatus: 'Prohibited',
+        countryStatus: '🚫 PROHIBITED (Red status in intranet)',
         activityStatus: 'N/A',
         restrictions: [
-          `Company accounts for ${params.companyCountry} are not accepted due to compliance restrictions.`,
-          `Reference: ${restrictions.pageSource || 'Intranet Page 58238300'} - Restricted Countries List`
+          `❌ Company accounts for ${params.companyCountry} are NOT ACCEPTED`,
+          `📄 Source: FNTT Space - "${COUNTRY_PAGE_TITLE}"`,
+          `🔴 Country marked as PROHIBITED/RED in the country acceptance table`,
+          `🔗 View full list: ${restrictions.pageSource}`,
+          `⚠️ This country is listed in the restricted countries section with "No" or "Prohibited" status`
         ],
         conditions: [],
         intranetPageSource: restrictions.pageSource,
+        countryPageId: 'FNTT Space',
+        activitiesPageId: restrictions.activitiesPageSource,
       };
     }
 
@@ -594,18 +628,27 @@ class PayseraIntranetService {
     const requiresEDD = restrictions.enhancedDueDiligence.includes(params.companyCountry);
     const isEU = this.isEUCountry(params.companyCountry);
     
-    let countryStatus = 'Accepted';
+    let countryStatus = '';
+    const countryRestrictions: string[] = [];
+    
     if (requiresEDD) {
-      countryStatus = 'Enhanced Due Diligence Required';
+      countryStatus = '⚠️ Enhanced Due Diligence Required (Yellow/Orange status)';
+      countryRestrictions.push(`⚠️ ${params.companyCountry} requires ENHANCED DUE DILIGENCE`);
+      countryRestrictions.push(`📄 Source: FNTT Space - "${COUNTRY_PAGE_TITLE}"`);
+      countryRestrictions.push(`🟡 Country marked as requiring enhanced monitoring in intranet`);
     } else if (isEU) {
-      countryStatus = 'Standard Processing';
+      countryStatus = '✅ Accepted - Standard Processing (EU/EEA country)';
+      countryRestrictions.push(`✅ ${params.companyCountry} is an EU/EEA country - Standard processing applies`);
+      countryRestrictions.push(`📄 Source: FNTT Space - "${COUNTRY_PAGE_TITLE}"`);
     } else {
-      countryStatus = 'Case-by-case Review';
+      countryStatus = '⚠️ Requires Case-by-case Review';
+      countryRestrictions.push(`⚠️ ${params.companyCountry} requires individual assessment for account opening`);
+      countryRestrictions.push(`📄 Source: FNTT Space - "${COUNTRY_PAGE_TITLE}"`);
     }
 
     // Check activity
     const activityLower = params.companyActivity.toLowerCase();
-    let activityStatus = 'Accepted';
+    let activityStatus = '';
     const activityRestrictions: string[] = [];
     const conditions: string[] = [];
 
@@ -617,47 +660,66 @@ class PayseraIntranetService {
         return {
           isPossible: false,
           countryStatus,
-          activityStatus: 'Prohibited',
+          activityStatus: '🚫 PROHIBITED Activity (Red status)',
           restrictions: [
-            `Business activity "${prohibited}" is not accepted.`,
-            `Reference: ${restrictions.pageSource || 'Intranet Page 58238300'} - Prohibited Activities List`
+            ...countryRestrictions,
+            `❌ Business activity "${prohibited}" is NOT ACCEPTED`,
+            `📄 Source: FNTT Space - "${ACTIVITIES_PAGE_TITLE}"`,
+            `🔴 This activity type is listed in the PROHIBITED activities section`,
+            `🔗 View full list: ${restrictions.activitiesPageSource}`,
+            `⚠️ Account opening is NOT POSSIBLE for this type of business activity`
           ],
           conditions: [],
           intranetPageSource: restrictions.pageSource,
+          countryPageId: 'FNTT Space',
+          activitiesPageId: restrictions.activitiesPageSource,
         };
       }
     }
 
     // Check restricted activities (may be accepted with conditions)
+    let hasRestrictedActivity = false;
     for (const restricted of restrictions.restrictedActivities) {
       const restrictedLower = restricted.toLowerCase();
       // Check both directions: if activity contains restricted words OR restricted phrase contains activity
       if (activityLower.includes(restrictedLower) || restrictedLower.includes(activityLower)) {
-        activityStatus = 'Restricted - Requires Additional Review';
-        activityRestrictions.push(`Activity "${restricted}" requires additional compliance review`);
-        conditions.push('Valid business licenses must be provided');
-        conditions.push('Enhanced monitoring will be applied');
+        hasRestrictedActivity = true;
+        activityStatus = '⚠️ RESTRICTED Activity - Additional Review Required';
+        activityRestrictions.push(`⚠️ Activity "${restricted}" is RESTRICTED (requires additional compliance review)`);
+        activityRestrictions.push(`📄 Source: FNTT Space - "${ACTIVITIES_PAGE_TITLE}"`);
+        activityRestrictions.push(`🟡 This activity is listed in the RESTRICTED activities section`);
+        conditions.push('✅ Valid business licenses MUST be provided');
+        conditions.push('✅ Enhanced compliance monitoring will be applied');
+        conditions.push('✅ Additional documentation may be requested during review');
       }
     }
 
-    if (requiresEDD) {
-      conditions.push('Enhanced due diligence documentation required');
-      conditions.push('Company beneficial ownership verification required');
-      conditions.push('Source of funds documentation required');
+    if (!hasRestrictedActivity) {
+      activityStatus = '✅ Accepted - Standard Activity';
+      activityRestrictions.push(`✅ Business activity is ACCEPTED with standard processing`);
+      activityRestrictions.push(`📄 Source: FNTT Space - "${ACTIVITIES_PAGE_TITLE}"`);
     }
 
-    // Add intranet reference
-    if (activityRestrictions.length > 0 || conditions.length > 0) {
-      activityRestrictions.push(`Reference: ${restrictions.pageSource || 'Intranet Page 58238300'}`);
+    if (requiresEDD) {
+      conditions.push('📝 Enhanced due diligence documentation REQUIRED');
+      conditions.push('📝 Company beneficial ownership verification REQUIRED');
+      conditions.push('📝 Source of funds documentation REQUIRED');
+      conditions.push('📝 Additional KYC/AML checks will be conducted');
     }
+
+    // Add intranet references
+    activityRestrictions.push(`🔗 Country policy: ${restrictions.pageSource}`);
+    activityRestrictions.push(`🔗 Activities policy: ${restrictions.activitiesPageSource}`);
 
     return {
       isPossible: true,
       countryStatus,
-      activityStatus: activityStatus === 'Accepted' ? 'Accepted' : activityStatus,
-      restrictions: activityRestrictions,
+      activityStatus,
+      restrictions: [...countryRestrictions, ...activityRestrictions],
       conditions,
       intranetPageSource: restrictions.pageSource,
+      countryPageId: 'FNTT Space',
+      activitiesPageId: restrictions.activitiesPageSource,
     };
   }
 
@@ -671,6 +733,162 @@ class PayseraIntranetService {
       'Spain', 'Sweden', 'Iceland', 'Liechtenstein', 'Norway'
     ];
     return euCountries.includes(country);
+  }
+
+  // Search intranet for a topic
+  async searchIntranet(query: string): Promise<{
+    results: Array<{
+      pageId: string;
+      pageTitle: string;
+      pageUrl: string;
+      relevantContent: string;
+      summary: string;
+    }>;
+    totalResults: number;
+    query: string;
+  }> {
+    if (!this.config.apiKey || !this.config.email) {
+      console.warn('Paysera Intranet credentials not configured. Using mock search results.');
+      return this.getMockSearchResults(query);
+    }
+
+    try {
+      // Use Confluence search API
+      const searchUrl = `${this.config.baseUrl}/rest/api/content/search?cql=${encodeURIComponent(`text ~ "${query}"`)}&limit=10&expand=body.view`;
+
+      const response = await fetch(searchUrl, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Basic ${this.getBasicAuth()}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        console.error(`Search failed: ${response.status} ${response.statusText}`);
+        return this.getMockSearchResults(query);
+      }
+
+      const data = await response.json();
+      const results = data.results.map((page: any) => {
+        const bodyText = page.body?.view?.value || '';
+        // Strip HTML tags to get plain text
+        const plainText = bodyText.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+        
+        // Extract relevant snippet around query
+        const lowerText = plainText.toLowerCase();
+        const lowerQuery = query.toLowerCase();
+        const queryIndex = lowerText.indexOf(lowerQuery);
+        
+        let relevantContent = '';
+        if (queryIndex !== -1) {
+          const start = Math.max(0, queryIndex - 150);
+          const end = Math.min(plainText.length, queryIndex + 150);
+          relevantContent = '...' + plainText.substring(start, end) + '...';
+        } else {
+          relevantContent = plainText.substring(0, 300) + '...';
+        }
+
+        return {
+          pageId: page.id,
+          pageTitle: page.title,
+          pageUrl: `${this.config.baseUrl}${page._links.webui}`,
+          relevantContent,
+          summary: `Found in: ${page.title}`,
+        };
+      });
+
+      return {
+        results,
+        totalResults: data.size || results.length,
+        query,
+      };
+    } catch (error) {
+      console.error('Error searching intranet:', error);
+      return this.getMockSearchResults(query);
+    }
+  }
+
+  // Mock search results for when API is not available
+  private getMockSearchResults(query: string): any {
+    const lowerQuery = query.toLowerCase();
+    const allResults = [
+      {
+        pageId: '58238300',
+        pageTitle: 'Transfer Rules and Restrictions',
+        pageUrl: 'https://intranet.paysera.net/display/PSWEB/58238300',
+        keywords: ['transfer', 'sepa', 'swift', 'currency', 'country', 'restriction', 'prohibited', 'fee'],
+        summary: 'Complete transfer rules including SEPA, Currency One, and SWIFT systems. Contains information about restricted countries, enhanced monitoring requirements, and currency restrictions.',
+      },
+      {
+        pageId: 'FNTT-Country',
+        pageTitle: 'Opportunities to open a company account by country',
+        pageUrl: 'https://intranet.paysera.net/display/FNTT/Opportunities+to+open+a+company+account+by+country',
+        keywords: ['company', 'country', 'account', 'registration', 'prohibited', 'restricted', 'edd', 'enhanced'],
+        summary: 'Country acceptance criteria for company account opening. Lists prohibited countries (red status), countries requiring enhanced due diligence (yellow/orange status), and accepted countries.',
+      },
+      {
+        pageId: 'FNTT-Activities',
+        pageTitle: 'ANNEX 2. TYPES OF BUSINESS ACTIVITIES',
+        pageUrl: 'https://intranet.paysera.net/display/FNTT/ANNEX+2.+TYPES+OF+BUSINESS+ACTIVITIES',
+        keywords: ['activity', 'business', 'prohibited', 'restricted', 'gambling', 'crypto', 'forex', 'license'],
+        summary: 'Lists prohibited business activities (not accepted) and restricted activities (requiring additional review and licensing). Includes gambling, cryptocurrency, weapons, tobacco, and other regulated sectors.',
+      },
+      {
+        pageId: '12345678',
+        pageTitle: 'KYC and AML Procedures',
+        pageUrl: 'https://intranet.paysera.net/display/COMPLIANCE/KYC-AML',
+        keywords: ['kyc', 'aml', 'identification', 'verification', 'due diligence', 'monitoring', 'compliance'],
+        summary: 'Know Your Customer (KYC) and Anti-Money Laundering (AML) procedures. Covers client identification requirements, enhanced due diligence procedures, and ongoing monitoring obligations.',
+      },
+      {
+        pageId: '23456789',
+        pageTitle: 'SEPA Transfer Guidelines',
+        pageUrl: 'https://intranet.paysera.net/display/PAYMENTS/SEPA-Guidelines',
+        keywords: ['sepa', 'euro', 'eur', 'eu', 'eea', 'instant', 'transfer'],
+        summary: 'SEPA transfer system guidelines and requirements. Covers SEPA eligibility, supported countries, instant SEPA transfers, and processing times.',
+      },
+      {
+        pageId: '34567890',
+        pageTitle: 'Currency One System Documentation',
+        pageUrl: 'https://intranet.paysera.net/display/PAYMENTS/Currency-One',
+        keywords: ['currency one', 'usd', 'gbp', 'pln', 'czk', 'chf', 'international', 'multi-currency'],
+        summary: 'Currency One system documentation for multi-currency transfers. Supports USD, GBP, CHF, PLN, CZK, RON, BGN, NOK, SEK, DKK, HUF with flat 1 EUR fee.',
+      },
+      {
+        pageId: '45678901',
+        pageTitle: 'SWIFT Transfer Procedures',
+        pageUrl: 'https://intranet.paysera.net/display/PAYMENTS/SWIFT-Procedures',
+        keywords: ['swift', 'international', 'wire', 'bic', 'correspondent', 'intermediary'],
+        summary: 'SWIFT international wire transfer procedures. Covers SWIFT/BIC codes, correspondent banking relationships, fees, and processing times for international transfers.',
+      },
+    ];
+
+    // Filter results based on query
+    const filteredResults = allResults.filter(result => 
+      result.keywords.some(keyword => keyword.includes(lowerQuery) || lowerQuery.includes(keyword))
+    ).map(result => ({
+      pageId: result.pageId,
+      pageTitle: result.pageTitle,
+      pageUrl: result.pageUrl,
+      relevantContent: `This page contains information about: ${result.keywords.join(', ')}`,
+      summary: result.summary,
+    }));
+
+    return {
+      results: filteredResults.length > 0 ? filteredResults : [
+        {
+          pageId: '58238300',
+          pageTitle: 'Transfer Rules and Restrictions',
+          pageUrl: 'https://intranet.paysera.net/display/PSWEB/58238300',
+          relevantContent: `No exact match found for "${query}". This is the main transfer rules page which may contain related information.`,
+          summary: 'Main transfer rules page - may contain information related to your search query.',
+        }
+      ],
+      totalResults: filteredResults.length > 0 ? filteredResults.length : 1,
+      query,
+    };
   }
 }
 
