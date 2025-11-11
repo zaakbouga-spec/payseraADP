@@ -527,16 +527,16 @@ class PayseraIntranetService {
       // Add more special systems here as needed (e.g., specific systems for other currencies/countries)
     };
 
-    // 1. Local transfer for Lithuania (EUR only)
-    if (params.recipientCountry === 'Lithuania' && params.currency === 'EUR') {
+    // 1. Local transfer for Lithuania (EUR only) - BOTH sender and recipient must be in Lithuania
+    if (params.senderNationality === 'Lithuania' && params.recipientCountry === 'Lithuania' && params.currency === 'EUR') {
       system = 'Local Transfer (Lithuania)';
       fee = '0 EUR';
       restrictions.push('✅ Transfer will be executed via LOCAL TRANSFER system (Lithuania domestic)');
-      restrictions.push('📍 Why this system: Sending EUR within Lithuania uses the local Lithuanian banking network');
+      restrictions.push('📍 Why this system: Both sender and recipient are in Lithuania, using local Lithuanian banking network');
       restrictions.push('⏱️ Processing time: Same business day');
       restrictions.push('💶 Fee: 0 EUR (free for local Lithuanian transfers)');
       restrictions.push('📄 Source: Paysera internal transfer routing rules - Local transfers within Lithuania');
-    } 
+    }
     // 2. Special country-currency systems (like bg-postbank for BGN)
     else if (specialSystems[params.currency] && specialSystems[params.currency].countries.includes(params.recipientCountry)) {
       const specialSystem = specialSystems[params.currency];
