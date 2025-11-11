@@ -121,6 +121,7 @@ export const checkTransfer = async (data: TransferCheckRequest): Promise<Transfe
             restrictions: result.restrictions.join('; ') || 'None',
             explanation,
             conclusion,
+            intranetPageSource: result.intranetPageSource,
         };
     } catch (error) {
         console.error('Transfer check error:', error);
@@ -174,6 +175,7 @@ export const validateCompany = async (data: CompanyValidationRequest): Promise<C
             activityStatus: result.activityStatus,
             explanation,
             conclusion,
+            intranetPageSource: result.intranetPageSource,
         };
     } catch (error) {
         console.error('Company validation error:', error);

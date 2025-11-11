@@ -37,6 +37,7 @@ export interface TransferCheckResponse {
     fee: string;
     restrictions: string;
     conclusion: string;
+    intranetPageSource?: string;
 }
 
 export interface CompanyValidationResponse {
@@ -46,6 +47,7 @@ export interface CompanyValidationResponse {
     activityStatus: string;
     explanation: string;
     conclusion: string;
+    intranetPageSource?: string;
 }
 
 export interface IdentifierValidationResponse {
